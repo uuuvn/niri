@@ -80,7 +80,10 @@ impl DBusServers {
                 .unwrap();
             dbus.conn_display_config = try_start(display_config);
 
-            let screen_saver = ScreenSaver::new(niri.is_fdo_idle_inhibited.clone());
+            let screen_saver = ScreenSaver::new(
+                niri.is_fdo_idle_inhibited.clone(),
+                niri.is_fdo_simulate_user_event.clone(),
+            );
             dbus.conn_screen_saver = try_start(screen_saver);
 
             let (to_niri, from_screenshot) = calloop::channel::channel();

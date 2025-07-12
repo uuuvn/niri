@@ -15,6 +15,7 @@ use super::Start;
 
 pub struct ScreenSaver {
     is_inhibited: Arc<AtomicBool>,
+    is_simulate_user_activity: Arc<AtomicBool>,
     is_broken: Arc<AtomicBool>,
     inhibitors: Arc<Mutex<HashMap<u32, OwnedUniqueName>>>,
     counter: u32,
@@ -60,6 +61,12 @@ impl ScreenSaver {
         cookie.ok_or_else(|| fdo::Error::Failed(String::from("no available cookie")))
     }
 
+    async fn simulate_user_activity(&mut self, #[zbus(header)] hdr: Header<'_>) -> fdo::Result<()> {
+        trace!("fdo simulate_user_activity, sender: {:?}", hdr.sender());
+        self.is_simulate_user_activity.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+
     async fn un_inhibit(&mut self, cookie: u32) -> fdo::Result<()> {
         trace!("fdo uninhibit, cookie: {cookie}");
 
@@ -78,9 +85,10 @@ impl ScreenSaver {
 }
 
 impl ScreenSaver {
-    pub fn new(is_inhibited: Arc<AtomicBool>) -> Self {
+    pub fn new(is_inhibited: Arc<AtomicBool>, is_simulate_user_activity: Arc<AtomicBool>) -> Self {
         Self {
             is_inhibited,
+            is_simulate_user_activity,
             is_broken: Arc::new(AtomicBool::new(false)),
             inhibitors: Arc::new(Mutex::new(HashMap::new())),
             counter: 0,

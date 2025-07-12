@@ -312,6 +312,7 @@ pub struct Niri {
     pub previously_focused_window: Option<Window>,
     pub idle_inhibiting_surfaces: HashSet<WlSurface>,
     pub is_fdo_idle_inhibited: Arc<AtomicBool>,
+    pub is_fdo_simulate_user_event: Arc<AtomicBool>,
     pub keyboard_shortcuts_inhibiting_surfaces: HashMap<WlSurface, KeyboardShortcutsInhibitor>,
 
     pub cursor_manager: CursorManager,
@@ -717,6 +718,7 @@ impl State {
         self.niri.refresh_pointer_outputs();
         self.niri.global_space.refresh();
         self.niri.refresh_idle_inhibit();
+        self.niri.refresh_simulate_user_activity();
         self.refresh_pointer_contents();
         foreign_toplevel::refresh(self);
 
@@ -2563,6 +2565,7 @@ impl Niri {
             previously_focused_window: None,
             idle_inhibiting_surfaces: HashSet::new(),
             is_fdo_idle_inhibited: Arc::new(AtomicBool::new(false)),
+            is_fdo_simulate_user_event: Arc::new(AtomicBool::new(false)),
             keyboard_shortcuts_inhibiting_surfaces: HashMap::new(),
             cursor_manager,
             cursor_texture_cache: Default::default(),
@@ -3876,6 +3879,15 @@ impl Niri {
                 })
             });
         self.idle_notifier_state.set_is_inhibited(is_inhibited);
+    }
+
+    pub fn refresh_simulate_user_activity(&mut self) {
+        let _span = tracy_client::span!("Niri::refresh_simulate_user_activity");
+        if self.is_fdo_simulate_user_event.load(Ordering::SeqCst) {
+            self.notify_activity();
+            self.is_fdo_simulate_user_event
+                .store(false, Ordering::SeqCst);
+        }
     }
 
     pub fn refresh_window_states(&mut self) {
